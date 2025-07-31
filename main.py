@@ -12,6 +12,7 @@ def main():
 
     unique_values = set()
 
+    
     with open(input_file, mode='r', encoding='utf-8') as file:
         csv_reader = csv.reader(file)
         header = next(csv_reader)  # Пропустить заголовок
@@ -21,7 +22,14 @@ def main():
                 for part in cell.split(','):
                     cleaned = re.sub(r'^[^A-Za-zА-Яа-яЁё]+', '', part.strip())
                     if cleaned and contains_letters(cleaned):
-                        unique_values.add(cleaned)
+                        try:
+                            # Оставляем только часть после первого дефиса
+                            position = cleaned.split('-', 1)[1].strip()
+                            if position:
+                                unique_values.add(position)
+                        except IndexError:
+                            # Если дефиса нет — пропускаем строку
+                            continue
 
     unique_values = sorted(unique_values)
 
@@ -31,7 +39,7 @@ def main():
         for value in unique_values:
             writer.writerow([value])
 
-    clusterize()  # Вызываем кластеризацию
+    clusterize()
 
 if __name__ == '__main__':
     main()
