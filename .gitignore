@@ -39,3 +39,7 @@ Desktop.ini
 # Local config
 *.env
 .env.*
+
+# imgs
+*.png
+*.jpg
