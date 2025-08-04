@@ -1,11 +1,10 @@
 import pandas as pd
 
-
 df = pd.read_csv('input.csv', delimiter=';')
 df = df.dropna(subset=['Опыт работы кандидата','Возраст кандидата', 'Город кандидата'])
 df = df.drop_duplicates(subset=['Код маршрута'])
 df['Возраст кандидата'] = pd.to_numeric(df['Возраст кандидата'], errors='coerce')
-df = df[(df['Возраст кандидата'] >= 30) & (df['Возраст кандидата'] <= 40)]
+
 keyword_weights = {
     'Розничные продажи': {
         'keywords': [
@@ -73,10 +72,11 @@ keyword_weights = {
     }
 }
 
-# Function to calculate score and track matched keywords
-def calculate_score_and_keywords(experience) -> tuple:
-    if pd.isna(experience):
+def calculate_score_and_keywords(experience, age) -> tuple:
+    if pd.isna(experience) or pd.isna(age):
         return 0, ''
+    
+    # Calculate experience-based score
     experience = str(experience).lower()
     score = 0
     matched_keywords = []
@@ -85,13 +85,27 @@ def calculate_score_and_keywords(experience) -> tuple:
             if keyword in experience and keyword not in matched_keywords:
                 score += data['weight']
                 matched_keywords.append(keyword)
+    
+    # Apply age-based multiplier
+    if age < 18:
+        score = 0  # Candidates under 18 are not considered
+    elif 30 <= age <= 40:
+        score *= 1.0  # Full weight for 30-40 age range
+    elif 18 <= age < 30:
+        score *= 0.7  # Reduced weight for younger candidates
+    else:  # age > 40
+        score *= 0.85  # Moderately reduced weight for older candidates
+    
     return score, ', '.join(matched_keywords)
 
 df['Опыт работы кандидата'] = df['Опыт работы кандидата'].str.lower()
 
+# Apply scoring function with both experience and age
+df[['Score', 'keywords']] = df.apply(
+    lambda row: calculate_score_and_keywords(row['Опыт работы кандидата'], row['Возраст кандидата']),
+    axis=1
+).apply(pd.Series)
 
-df[['Score', 'keywords']] = df['Опыт работы кандидата'].apply(calculate_score_and_keywords).apply(pd.Series)
-
-# Optional: Filter candidates with non-zero scores and sort by score
+# Filter candidates with non-zero scores and sort by score
 df = df[df['Score'] > 0].sort_values(by='Score', ascending=False)
-df.to_csv('filter_candidates.csv')
+df.to_csv('filter_candidates.csv', sep=';', index=False)
